@@ -1,0 +1,14 @@
+{
+    "name": "com.tymski.snapper",
+    "displayName": "Snapper",
+    "description": "Unity snapping tool with custom steps.\nSnap position, rotation and scale with a single click.\nSupports multiple selection, undo, remembers your snap settings.",
+    "version": "1.0.0",
+    "unity": "2017.1",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Tymski/UnitySnapper"
+    },
+    "author": {
+        "name": "Tymski"
+    }
+}
