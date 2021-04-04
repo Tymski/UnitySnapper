@@ -1,19 +1,16 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using Sirenix.OdinInspector.Editor;
 using Sirenix.OdinInspector;
 using UnityEditor;
 using System;
 using System.Linq;
-using System.Reflection;
 
 namespace Tymski
 {
     public class Snapper : OdinEditorWindow
     {
         [MenuItem("Tools/Tymski/Snapper")]
-        private static void OpenWindow()
+        static void OpenWindow()
         {
             GetWindow<Snapper>().Show();
         }
@@ -59,16 +56,16 @@ namespace Tymski
         {
             if (!snapRotation) return;
 
+            Vector3 inspectorRotation = TransformUtils.GetInspectorRotation(t);
+
             Vector3 newVector = new Vector3(
-                (float)SnapTo(t.localEulerAngles.x, rotationStep),
-                (float)SnapTo(t.localEulerAngles.y, rotationStep),
-                (float)SnapTo(t.localEulerAngles.z, rotationStep)
+                (float)SnapTo(inspectorRotation.x, rotationStep),
+                (float)SnapTo(inspectorRotation.y, rotationStep),
+                (float)SnapTo(inspectorRotation.z, rotationStep)
             );
 
             t.localEulerAngles = newVector;
-
-            MethodInfo info = typeof(Transform).GetMethod("SetLocalEulerHint", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.SetProperty);
-            info.Invoke(t, new object[] { null });
+            TransformUtils.SetInspectorRotation(t, newVector);
         }
 
         void SnapScale(Transform t)
@@ -87,7 +84,7 @@ namespace Tymski
             EditorUtility.SetDirty(t);
         }
 
-        public static double SnapTo(double a, double snap)
+        double SnapTo(double a, double snap)
         {
             return Math.Round(a / snap) * snap;
         }
@@ -99,7 +96,7 @@ namespace Tymski
             JsonUtility.FromJsonOverwrite(data, this);
         }
 
-        private void OnDisable()
+        void OnDisable()
         {
             var data = JsonUtility.ToJson(this, false);
             EditorPrefs.SetString("Snapper", data);
