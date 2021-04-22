@@ -1,9 +1,10 @@
-﻿using UnityEngine;
+﻿using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
-using Sirenix.OdinInspector;
-using UnityEditor;
 using System;
 using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEngine;
 
 namespace Tymski
 {
@@ -24,10 +25,12 @@ namespace Tymski
         [HorizontalGroup("Scale"), ToggleLeft, SerializeField] bool snapScale = true;
         [HorizontalGroup("Scale"), HideLabel, EnableIf("snapScale"), SerializeField] double scaleStep = 0.01;
 
+        [NonSerialized] PropertyInfo gridSize;
+
         [Button(ButtonSizes.Large)]
         public void Snap()
         {
-            if (Selection.gameObjects.Length > 1) Debug.Log($"Snapping {Selection.gameObjects.Length} objects.");
+            // if (Selection.gameObjects.Length > 1) Debug.Log($"Snapping {Selection.gameObjects.Length} objects.");
             Undo.RecordObjects(Selection.gameObjects.Select(go => go.transform).ToArray(), "Snap");
             UnityEngine.Object[] ary = new UnityEngine.Object[Selection.gameObjects.Length];
 
@@ -41,16 +44,61 @@ namespace Tymski
             }
         }
 
+        [Button, ShowIf("@Selection.activeGameObject!=null")]
+        public void SetGridSizeToSelected()
+        {
+            if (Selection.activeGameObject == null) return;
+            gridSize.SetValue("size", new Vector3(
+                Selection.activeGameObject.GetComponent<MeshRenderer>().bounds.size.x,
+                Selection.activeGameObject.GetComponent<MeshRenderer>().bounds.size.y,
+                Selection.activeGameObject.GetComponent<MeshRenderer>().bounds.size.z
+            ));
+            EditorSnapSettings.move = new Vector3(
+                Selection.activeGameObject.GetComponent<MeshRenderer>().bounds.size.x,
+                Selection.activeGameObject.GetComponent<MeshRenderer>().bounds.size.y,
+                Selection.activeGameObject.GetComponent<MeshRenderer>().bounds.size.z
+            );
+        }
+
+        [Button, ShowIf("@Selection.activeGameObject==null")]
+        public void ResetGrid()
+        {
+            gridSize.SetValue("size", Vector3.one);
+            EditorSnapSettings.move = Vector3.one;
+        }
+
         void SnapPosition(Transform t)
         {
             if (!snapPosition) return;
 
-            t.localPosition = new Vector3(
-               (float)SnapTo(t.localPosition.x, positionStep),
-               (float)SnapTo(t.localPosition.y, positionStep),
-               (float)SnapTo(t.localPosition.z, positionStep)
-            );
+            RectTransform rectTransform = t.GetComponent<RectTransform>();
+            if (rectTransform != null)
+            {
+                SnapRectPosition(rectTransform);
+            }
+            else
+            {
+                SnapRegularPosition(t);
+            }
+
+            void SnapRegularPosition(Transform t2)
+            {
+                t2.localPosition = new Vector3(
+                   (float)SnapTo(t2.localPosition.x, positionStep),
+                   (float)SnapTo(t2.localPosition.y, positionStep),
+                   (float)SnapTo(t2.localPosition.z, positionStep)
+                );
+            }
+
+            void SnapRectPosition(RectTransform rt)
+            {
+                SnapRegularPosition(rt.transform);
+                rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, (float)SnapTo(rt.rect.width, positionStep));
+                rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, (float)SnapTo(rt.rect.height, positionStep));
+                SnapRegularPosition(rt.transform);
+            }
         }
+
 
         void SnapRotation(Transform t)
         {
@@ -92,14 +140,28 @@ namespace Tymski
         protected override void OnEnable()
         {
             base.OnEnable();
-            var data = EditorPrefs.GetString("Snapper", JsonUtility.ToJson(this, false));
-            JsonUtility.FromJsonOverwrite(data, this);
+            LoadSettings();
+
+            Assembly assembly = Assembly.Load("UnityEditor.dll");
+            Type gridSettings = assembly.GetType("UnityEditor.GridSettings");
+            gridSize = gridSettings.GetProperty("size");
         }
 
         void OnDisable()
         {
+            SaveSettings();
+        }
+
+        void SaveSettings()
+        {
             var data = JsonUtility.ToJson(this, false);
             EditorPrefs.SetString("Snapper", data);
+        }
+
+        void LoadSettings()
+        {
+            var data = EditorPrefs.GetString("Snapper", JsonUtility.ToJson(this, false));
+            JsonUtility.FromJsonOverwrite(data, this);
         }
     }
 }
