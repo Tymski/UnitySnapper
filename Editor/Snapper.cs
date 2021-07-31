@@ -24,10 +24,9 @@ namespace Tymski
         [HorizontalGroup("Scale"), ToggleLeft, SerializeField] bool snapScale = true;
         [HorizontalGroup("Scale"), HideLabel, EnableIf("snapScale"), SerializeField] double scaleStep = 0.01;
 
-        [Button(ButtonSizes.Large)]
+        [Button("@\"Snap (\" + Selection.gameObjects.Length + \")\"", ButtonSizes.Large)]
         public void Snap()
         {
-            if (Selection.gameObjects.Length > 1) Debug.Log($"Snapping {Selection.gameObjects.Length} objects.");
             Undo.RecordObjects(Selection.gameObjects.Select(go => go.transform).ToArray(), "Snap");
             UnityEngine.Object[] ary = new UnityEngine.Object[Selection.gameObjects.Length];
 
