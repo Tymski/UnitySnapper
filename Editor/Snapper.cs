@@ -9,22 +9,24 @@ namespace Tymski
 {
     public class Snapper : OdinEditorWindow
     {
-        [MenuItem("Tools/Tymski/Snapper")]
+        const string SNAPPER_KEY = "Tools/Tymski/Snapper";
+
+        [HorizontalGroup("Position"), ToggleLeft, SerializeField, LabelText("Position"), LabelWidth(25)] bool snapPosition = true;
+        [HorizontalGroup("Position"), HideLabel, EnableIf("snapPosition"), SerializeField] double positionStep = 0.001;
+
+        [HorizontalGroup("Rotation"), ToggleLeft, SerializeField, LabelText("Rotation"), LabelWidth(25)] bool snapRotation = true;
+        [HorizontalGroup("Rotation"), HideLabel, EnableIf("snapRotation"), SerializeField] double rotationStep = 0.01;
+
+        [HorizontalGroup("Scale"), ToggleLeft, SerializeField, LabelText("Scale"), LabelWidth(25)] bool snapScale = true;
+        [HorizontalGroup("Scale"), HideLabel, EnableIf("snapScale"), SerializeField] double scaleStep = 0.01;
+
+        [MenuItem(SNAPPER_KEY)]
         static void OpenWindow()
         {
             GetWindow<Snapper>().Show();
         }
 
-        [HorizontalGroup("Position"), ToggleLeft, SerializeField] bool snapPosition = true;
-        [HorizontalGroup("Position"), HideLabel, EnableIf("snapPosition"), SerializeField] double positionStep = 0.001;
-
-        [HorizontalGroup("Rotation"), ToggleLeft, SerializeField] bool snapRotation = true;
-        [HorizontalGroup("Rotation"), HideLabel, EnableIf("snapRotation"), SerializeField] double rotationStep = 0.01;
-
-        [HorizontalGroup("Scale"), ToggleLeft, SerializeField] bool snapScale = true;
-        [HorizontalGroup("Scale"), HideLabel, EnableIf("snapScale"), SerializeField] double scaleStep = 0.01;
-
-        [Button("@\"Snap (\" + Selection.gameObjects.Length + \")\"", ButtonSizes.Large)]
+        [Button("@\"Snap (\" + UnityEditor.Selection.gameObjects.Length + \")\"", ButtonSizes.Large)]
         public void Snap()
         {
             Undo.RecordObjects(Selection.gameObjects.Select(go => go.transform).ToArray(), "Snap");
@@ -70,6 +72,7 @@ namespace Tymski
         void SnapScale(Transform t)
         {
             if (!snapScale) return;
+
             t.localScale = new Vector3(
                 (float)SnapTo(t.localScale.x, scaleStep),
                 (float)SnapTo(t.localScale.y, scaleStep),
@@ -77,13 +80,13 @@ namespace Tymski
             );
         }
 
-        void SetDirty(Transform t)
+        static void SetDirty(Transform t)
         {
             t.hasChanged = true;
             EditorUtility.SetDirty(t);
         }
 
-        double SnapTo(double a, double snap)
+        static double SnapTo(double a, double snap)
         {
             return Math.Round(a / snap) * snap;
         }
@@ -91,14 +94,14 @@ namespace Tymski
         protected override void OnEnable()
         {
             base.OnEnable();
-            var data = EditorPrefs.GetString("Snapper", JsonUtility.ToJson(this, false));
+            var data = EditorPrefs.GetString(SNAPPER_KEY, JsonUtility.ToJson(this, false));
             JsonUtility.FromJsonOverwrite(data, this);
         }
 
         void OnDisable()
         {
             var data = JsonUtility.ToJson(this, false);
-            EditorPrefs.SetString("Snapper", data);
+            EditorPrefs.SetString(SNAPPER_KEY, data);
         }
     }
 }
